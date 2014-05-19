@@ -5,26 +5,22 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-###################################################################
-# build libsqlite replacement
-LOCAL_MODULE := libsqlite
+LOCAL_MODULE := libdb-6.0
 
-# BDB_TOP will change with release numbers
-BDB_TOP := db-6.0.30
-BDB_PATH := $(LOCAL_PATH)/$(BDB_TOP)/src
+BDB_TOP := $(realpath $(LOCAL_PATH)/../)
+BDB_PATH := $(BDB_TOP)/src
 
 # This directive results in arm (vs thumb) code.  It's necessary to
 # allow some BDB assembler code (for mutexes) to compile.
 LOCAL_ARM_MODE := arm
 
 # basic includes for BDB 11gR2
-LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android \
-	$(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(BDB_TOP)/src
+LOCAL_C_INCLUDES := \
+	$(BDB_PATH)\
+	$(LOCAL_PATH)\
+	$(BDB_TOP)/src
 
-# this is needed for sqlite3.c
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/$(BDB_TOP)/build_android/sql
-
-# Source files
+# sSource files
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/src/blob/blob_fileops.c \
 	$(BDB_TOP)/src/blob/blob_page.c \
@@ -214,8 +210,7 @@ LOCAL_SRC_FILES := \
 	$(BDB_TOP)/src/txn/txn_region.c \
 	$(BDB_TOP)/src/txn/txn_stat.c \
 	$(BDB_TOP)/src/txn/txn_util.c \
-	$(BDB_TOP)/src/common/crypto_stub.c \
-	$(BDB_TOP)/lang/sql/generated/sqlite3.c
+	$(BDB_TOP)/src/common/crypto_stub.c
 
 ifneq ($(TARGET_ARCH),arm)
 LOCAL_LDLIBS += -lpthread -ldl
@@ -234,15 +229,8 @@ endif
 #  format -- this has other requirements so do not do this without consulting
 #  Oracle.
 #
-LOCAL_CFLAGS += -Wall -DHAVE_USLEEP=1 \
-	-DSQLITE_DEFAULT_PAGE_SIZE=4096 \
-	-DBDBSQL_SHARE_PRIVATE=1 \
-	-DSQLITE_DEFAULT_JOURNAL_SIZE_LIMIT=524288 \
-	-DSQLITE_DEFAULT_CACHE_SIZE=128 \
-	-DSQLITE_THREADSAFE=1 -DNDEBUG=1 -DSQLITE_TEMP_STORE=3 \
-	-DSQLITE_OMIT_TRUNCATE_OPTIMIZATION -DSQLITE_OS_UNIX=1 \
-	-D_HAVE_SQLITE_CONFIG_H -DSQLITE_THREAD_OVERRIDE_LOCK=-1 \
-	-DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_BACKWARDS -Dfdatasync=fsync
+LOCAL_CFLAGS += -Wall -DHAVE_USLEEP=1 -DBDBSQL_SHARE_PRIVATE=1\
+								-DNDEBUG=1 -Dfdatasync=fsync
 
 # LOCAL_CFLAGS that are not used at this time
 # -DSQLITE_ENABLE_POISON
@@ -253,33 +241,8 @@ LOCAL_SHARED_LIBRARIES := libdl
 endif
 
 LOCAL_C_INCLUDES += $(call include-path-for, system-core)/cutils
-LOCAL_SHARED_LIBRARIES += liblog libicuuc libicui18n libutils
+LOCAL_SHARED_LIBRARIES += liblog libutils
+LOCAL_STATIC_LIBRARIES := libicuuc libicui18n 
 
-# This links in some static symbols from Android
-LOCAL_WHOLE_STATIC_LIBRARIES := libsqlite3_android
-
-include $(BUILD_SHARED_LIBRARY)
-
-################################################################################
-##device commande line tool:sqlite3
-################################################################################
-ifneq ($(SDK_ONLY),true)  # SDK doesn't need device version of sqlite3
-include $(CLEAR_VARS)
-
-LOCAL_ARM_MODE := arm
-LOCAL_SRC_FILES := $(BDB_TOP)/lang/sql/sqlite/src/shell.c
-LOCAL_SHARED_LIBRARIES := libsqlite
-LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
-	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
-
-ifneq ($(TARGET_ARCH),arm)
-LOCAL_LDLIBS += -lpthread -ldl
-endif
-
-LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
-LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
-LOCAL_MODULE_TAGS := debug
-LOCAL_MODULE := sqlite3
-include $(BUILD_EXECUTABLE)
-endif # !SDK_ONLY
+include $(BUILD_STATIC_LIBRARY)
 
